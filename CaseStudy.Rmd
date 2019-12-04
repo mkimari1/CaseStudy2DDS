@@ -1,0 +1,338 @@
+---
+title: "Attrition"
+author: "Muchigi"
+date: "11/28/2019"
+output: html_document
+---
+
+```{r }
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Imported Libraries
+
+```{r }
+#Bring in library's
+library(ggplot2)
+library(dplyr)
+library(GGally)
+library(mlbench)
+library(class)
+library(caret)
+library(e1071)
+library (MASS)
+
+```
+
+
+Bring in the data
+
+```{r }
+
+df <-read.csv('/Users/muchigi.kimari@mckesson.com/Google Drive/Doing_data_science/Doing/CaseStudy2_2_2_2/CaseStudy2-data.csv')
+```
+
+
+
+Dropped the column over18 because it has one level
+```{r}
+#this column had only one level so I dropped it
+df <-subset(df,select = -c(Over18,EmployeeCount, StandardHours))
+
+```
+
+Below checks if we have any Nulls
+
+```{r }
+#No missing values in the data
+sum(is.null(df))
+
+```
+
+Will filer the data to Attrition because we want to see the role with  the highest Attrition
+```{r }
+#No missing values in the data
+Attrition<-df %>% filter(Attrition =='Yes')
+
+```
+
+
+Below shows which role has the highest Attrition
+
+-Sales Excutive has the highest Attrition
+
+```{r }
+
+# ran a bar graph plot
+ggplot(Attrition) +
+  aes(x = JobRole) +
+  geom_bar() + 
+  geom_text(stat = 'count',aes(label =..count..),angle = 270, vjust = -0.2)+
+  coord_flip()+ggtitle("Role with highest Attrition")+xlab("Count") + ylab("JobRole")
+```
+
+Below are features that i believe lead to Attrition
+
+```{r }
+
+
+
+df%>%dplyr::select(Attrition,Age,MonthlyIncome,DistanceFromHome,OverTime)%>%ggpairs(aes(color = Attrition))
+
+```
+
+
+
+Since we have the factors, lets dig a little deeper
+
+
+You can see from the stacked histogram that younger employees have a higher rate of attrition
+
+```{r }
+df%>%ggplot( aes(x=Age, fill=Attrition)) +
+    geom_histogram( color="#e9ecef", alpha=0.6, position ='identity')+scale_fill_manual(values=c("#69b3a2", "#404080")) +labs(fill="")+ggtitle("Age vs Attrition")+xlab("Age") + ylab("Count")
+```
+
+
+
+You can see from the stacked histogram below that  employees with lower income have a higher rate of attrition
+
+
+```{r }
+df%>%ggplot( aes(x=MonthlyIncome, fill=Attrition)) +
+    geom_histogram( color="#e9ecef", alpha=0.6, position ='identity')+scale_fill_manual(values=c("#69b3a2", "#404080")) +labs(fill="")+ggtitle("Attrition vs MonthlyIncome")+xlab("MonthlyIncome") + ylab("Count")
+```
+
+You can see from the box plot that the distribution for Attrition is high for employees that drive far 
+
+
+```{r }
+df%>%ggplot( aes(x=Attrition, y=DistanceFromHome, fill=Attrition)) +geom_boxplot()+ggtitle("Attrition vs Distance From Home")+xlab("MonthlyIncome") + ylab("Count")
+```
+
+To get the right features for the Knn i ran the top features function for predicting Attrition
+
+```{r }
+
+set.seed(7)
+# load the library
+library(mlbench)
+library(caret)
+
+
+# prepare training scheme
+control <- trainControl(method="repeatedcv", number=10, repeats=3)
+# train the model
+model <- train(Attrition~.,data=df, method="lvq", preProcess="scale", trControl=control)
+# estimate variable importance
+importance <- varImp(model, scale=FALSE)
+# summarize importance
+print(importance)
+# plot importance
+plot(importance)
+```
+
+
+After running the feature importance,
+- I converted all my categrical data to Numeric
+
+
+```{r }
+
+#Selected the features based on the Feature importance function 
+modeldf<-df[,c(3,2,6,7,14,15,16,17,18,19,22,26,27,30,31,33)]
+
+i <- sapply(modeldf,is.factor)
+
+#converted the dataframe to numeric
+modeldf[i] <- lapply(modeldf[i], as.numeric)
+str(modeldf)
+```
+
+Ran the first Knn with K = 9
+
+```{r }
+
+splitPerc = .75
+trainIndices = sample(1:dim(modeldf)[1],round(splitPerc * dim(modeldf)[1]))
+train = modeldf[trainIndices,]
+test = modeldf[-trainIndices,]
+
+classification = knn(train[,2:16] ,test[,2:16],train$Attrition,prob = TRUE, k = 9)
+
+table(classification,test$Attrition)
+
+confusionMatrix(table(classification,test$Attrition))
+
+```
+
+
+Ran a plot to find the best R , which I found was 20  
+
+
+```{r }
+
+accs = data.frame(accuracy = numeric(30), k = numeric(30))
+for(i in 1:30)
+{
+  classifications = knn(train[,2:16],test[,2:16],train$Attrition, prob = TRUE, k = i)
+  table(test$Attrition,classifications)
+  CM = confusionMatrix(table(test$Attrition,classifications))
+  accs$accuracy[i] = CM$overall[1]
+  accs$k[i] = i
+}
+plot(accs$k,accs$accuracy, type = "l", xlab = "k")
+```
+
+
+Ran a cross validation with K = 20, the score was still in the 80s range
+
+
+```{r }
+
+CV <- knn.cv(modeldf[,2:16],modeldf$Attrition,k=15)
+
+confusionMatrix(table(CV,modeldf$Attrition))
+
+```
+
+
+Prepared the data so that we could predict Attrition
+
+
+```{r }
+#bring in data with no Attrition
+No_attrition <-read.csv('//Users/muchigi.kimari@mckesson.com/Google Drive/Doing_data_science/Doing/CaseStudy2_2_2_2/CaseStudy2CompSet No Attrition.csv')
+
+#selected the features from the data
+No_attrition1<-No_attrition[,c(2,5,6,14,15,16,17,18,19,23,28,29,32,33,35)]
+i <- sapply(No_attrition1,is.factor)
+
+#Converted categorical data to Numerical numbers 
+No_attrition1[i] <- lapply(No_attrition1[i], as.numeric)
+
+#Attrition resultss
+PredictedAttrition <- knn(modeldf[,c(2:16)],No_attrition1,modeldf$Attrition, k=9)
+
+#Put the results into a dataframe
+PredictedAttrition<-data_frame(PredictedAttrition)
+
+#changes the data type to factors because we want to convert the 1 and 0 to Yes and NO
+PredictedAttrition$PredictedAttrition <- as.factor(PredictedAttrition$PredictedAttrition)
+
+#changed the numeric values to No anf Yes
+PredictedAttrition<-ifelse(PredictedAttrition$PredictedAttrition==1, "No", "Yes")
+
+#convert to dataframe
+PredictedAttrition<-data_frame(PredictedAttrition)
+
+#merge the data No_attrition and the predicted results
+
+AttritionResult<- merge(No_attrition,PredictedAttrition,by=0, all=TRUE)
+
+AttritionResult<-AttritionResult[,-c(1)]
+
+
+#save to CSV
+
+write.csv(AttritionResult,'Case2PredictionsMuchigiKimariAttrition.csv')
+```
+
+
+
+Find features for predicting regression using stepwise selection
+
+
+```{r }
+
+
+regdf<-df
+
+i <- sapply(regdf,is.factor)
+
+regdf[i] <- lapply(regdf[i], as.numeric)
+
+
+step.model <- train(MonthlyIncome ~., data = regdf,method ="lmStepAIC",trace = FALSE)
+
+
+# this will give us the features
+step.model[["finalModel"]][["coefficients"]]
+```
+
+
+
+Fit a model with the stepwise features
+
+
+
+```{r }
+
+numMSPEs = 1000
+
+MSPEHolderModel1 = numeric(numMSPEs)
+
+for (i in 1:numMSPEs)
+{
+  TrainObs = sample(seq(1,dim(regdf)[1]),round(.75*dim(regdf)[1]),replace = FALSE)
+  Train = regdf[TrainObs,]
+  Test = regdf[-TrainObs,]
+  Model1_fit = lm(MonthlyIncome ~  BusinessTravel + Department + DistanceFromHome + EnvironmentSatisfaction + JobLevel + JobRole + TotalWorkingYears + YearsWithCurrManager, data = Train)
+  Model1_Preds = predict(Model1_fit, newdata = Test)
+  
+  #MSPE Model 1
+  MSPE = mean((Test$MonthlyIncome - Model1_Preds)^2)
+  MSPE
+  MSPEHolderModel1[i] = MSPE
+  
+
+  
+}
+mean(MSPEHolderModel1)
+
+summary(Model1_fit)
+```
+
+
+Predict the Monthly income from the data in No Salary document
+
+
+
+```{r }
+
+#read Data
+No_salary <-readxl::read_xlsx("/Users/muchigi.kimari@mckesson.com/Google Drive/Doing_data_science/Doing/case study/CaseStudy2CompSet No Salary.xlsx")
+
+#convert the data to factors because the are in character type
+No_salary$BusinessTravel <- as.factor(No_salary$BusinessTravel)
+No_salary$Department <- as.factor(No_salary$Department)
+No_salary$MaritalStatus <- as.factor(No_salary$MaritalStatus)
+No_salary$JobRole <- as.factor(No_salary$JobRole)
+
+#prepare the data
+No_salary1 <-No_salary[,c(4,6,7,12,19,16,17,29,35)]
+i <- sapply(No_salary1,is.object)
+
+No_salary1[i] <- lapply(No_salary1[i], as.numeric)
+
+str(No_salary1)
+
+#predict the results
+PredictedMonthlyIncome<-predict(Model1_fit,No_salary1)
+
+#convert results to dataframe
+MonthlyIncome<-data_frame(PredictedMonthlyIncome)
+
+#Merge the data
+regression_data <- merge(No_salary,MonthlyIncome,by=0, all=TRUE)
+
+regression_data<-regression_data[,-c(1)]
+
+
+#save to CSV
+write.csv(regression_data,'Case2PredictionsMuchigiKimariSalary.csv')
+```
+
+
