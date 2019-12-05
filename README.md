@@ -1,6 +1,6 @@
 # Attrition
 
-#Introduction
+# Introduction
 
 In this project we will do a deep dive into factors that lead to Attrition. I will tackle this problem by first stating what i think are the leading factors to Attrition. Then later back my theories with a few charts. 
 
