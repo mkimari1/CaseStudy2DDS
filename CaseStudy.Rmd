@@ -79,7 +79,7 @@ Below are features that i believe lead to Attrition
 
 
 
-df%>%dplyr::select(Attrition,Age,MonthlyIncome,DistanceFromHome,OverTime)%>%ggpairs(aes(color = Attrition))
+df%>%dplyr::select(Attrition,Age,MonthlyIncome,JobSatisfaction ,OverTime)%>%ggpairs(aes(color = Attrition))
 
 ```
 
@@ -92,7 +92,18 @@ You can see from the stacked histogram that younger employees have a higher rate
 
 ```{r }
 df%>%ggplot( aes(x=Age, fill=Attrition)) +
-    geom_histogram( color="#e9ecef", alpha=0.6, position ='identity')+scale_fill_manual(values=c("#69b3a2", "#404080")) +labs(fill="")+ggtitle("Age vs Attrition")+xlab("Age") + ylab("Count")
+    geom_histogram( color="#e9ecef", alpha=0.6, position ='identity')+scale_fill_manual(values=c("#0066FF", "#404080")) +labs(fill="")+ggtitle("Age vs Attrition")+xlab("Age") + ylab("Count")
+```
+
+
+
+With Graph you can see why younger employees have a high rate of attrition. They are paid less
+```{r }
+
+
+df%>%ggplot(aes(x=Age, y=MonthlyIncome, shape=Attrition, color=Attrition)) +geom_point()+ggtitle("Age vs MonthlyIncome")+xlab("MonthlyIncome") + ylab("Count")
+
+
 ```
 
 
@@ -102,15 +113,26 @@ You can see from the stacked histogram below that  employees with lower income h
 
 ```{r }
 df%>%ggplot( aes(x=MonthlyIncome, fill=Attrition)) +
-    geom_histogram( color="#e9ecef", alpha=0.6, position ='identity')+scale_fill_manual(values=c("#69b3a2", "#404080")) +labs(fill="")+ggtitle("Attrition vs MonthlyIncome")+xlab("MonthlyIncome") + ylab("Count")
+    geom_histogram( color="#e9ecef", alpha=0.6, position ='identity')+scale_fill_manual(values=c("#0066FF", "#404080")) +labs(fill="")+ggtitle("Attrition vs MonthlyIncome")+xlab("MonthlyIncome") + ylab("Count")
 ```
+
+
+
+
+
 
 You can see from the box plot that the distribution for Attrition is high for employees that drive far 
 
 
 ```{r }
+df%>%ggplot( aes(x=Attrition, y=JobSatisfaction, fill=Attrition)) +geom_boxplot()+ggtitle("Attrition vs Job Satisfaction")+xlab("Attrition") + ylab("Count")
+```
+
+
+```{r }
 df%>%ggplot( aes(x=Attrition, y=DistanceFromHome, fill=Attrition)) +geom_boxplot()+ggtitle("Attrition vs Distance From Home")+xlab("MonthlyIncome") + ylab("Count")
 ```
+
 
 To get the right features for the Knn i ran the top features function for predicting Attrition
 
@@ -160,7 +182,7 @@ trainIndices = sample(1:dim(modeldf)[1],round(splitPerc * dim(modeldf)[1]))
 train = modeldf[trainIndices,]
 test = modeldf[-trainIndices,]
 
-classification = knn(train[,2:16] ,test[,2:16],train$Attrition,prob = TRUE, k = 9)
+classification = knn(train[,2:16] ,test[,2:16],train$Attrition,prob = TRUE, k = 20)
 
 table(classification,test$Attrition)
 
@@ -293,6 +315,12 @@ for (i in 1:numMSPEs)
 mean(MSPEHolderModel1)
 
 summary(Model1_fit)
+
+MSE = (mean(Model1_fit$residuals^2))
+
+RMSE= sqrt(MSE)
+
+RMSE
 ```
 
 
@@ -334,5 +362,32 @@ regression_data<-regression_data[,-c(1)]
 #save to CSV
 write.csv(regression_data,'Case2PredictionsMuchigiKimariSalary.csv')
 ```
+
+
+Predict my Attrition 
+```{r}
+
+MyAttrition<-data.frame(Age = 34,
+                        Department=3,
+                        DistanceFromHome=40,
+                        JobInvolvement=3,
+                        JobLevel=3,
+                        JobRole=7,
+                        JobSatisfaction=3,
+                        MaritalStatus=2,
+                        MonthlyIncome='***',
+                        OverTime=1,
+                        StockOptionLevel=0,
+                        TotalWorkingYears=7,
+                        YearsAtCompany=3,
+                        YearsInCurrentRole=0,
+                        YearsWithCurrManager=0)
+
+PredictedAttrition <- knn(modeldf[,c(2:16)],MyAttrition,modeldf$Attrition, k=9)
+
+PredictedAttrition
+```
+
+
 
 
