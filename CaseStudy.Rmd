@@ -365,6 +365,8 @@ write.csv(regression_data,'Case2PredictionsMuchigiKimariSalary.csv')
 
 
 Predict my Attrition 
+
+ - 1 equals no attrition
 ```{r}
 
 MyAttrition<-data.frame(Age = 34,
@@ -375,7 +377,7 @@ MyAttrition<-data.frame(Age = 34,
                         JobRole=7,
                         JobSatisfaction=3,
                         MaritalStatus=2,
-                        MonthlyIncome='***',
+                        MonthlyIncome="****",
                         OverTime=1,
                         StockOptionLevel=0,
                         TotalWorkingYears=7,
@@ -383,9 +385,9 @@ MyAttrition<-data.frame(Age = 34,
                         YearsInCurrentRole=0,
                         YearsWithCurrManager=0)
 
-PredictedAttrition <- knn(modeldf[,c(2:16)],MyAttrition,modeldf$Attrition, k=9)
+#PredictedAttrition <- knn(modeldf[,c(2:16)],MyAttrition,modeldf$Attrition, k=9)
 
-PredictedAttrition
+#PredictedAttrition
 ```
 
 
